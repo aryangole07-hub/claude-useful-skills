@@ -13,7 +13,7 @@ A collection of [Claude Code](https://claude.com/claude-code) skills, grouped by
 
 | Skill | What it does |
 |---|---|
-| [`marketml`](AI-ML/marketml) | Quant-researcher method for training, tuning and honestly evaluating ML stock-ranking models: fixed train/test splits with purge and embargo, walk-forward tuning inside training only, no cherry-picking, tradable-universe portfolios with costs, per-year tables (return, daily max/median drawdown, beat-market, top/bottom 10%/5% accuracy), and exposure-based diagnostics for why a model won or lost. |
+| [`marketml`](AI-ML/marketml) | Quant-researcher method for training, tuning and honestly evaluating ML stock-ranking models: fixed train/test splits with purge and embargo, walk-forward tuning inside training only, no cherry-picking, tradable-universe portfolios with costs, per-year tables (return, daily max/median drawdown, beat-market, top/bottom 10%/5% accuracy), exposure-based diagnostics for why a model won or lost, and a six-method menu (V1, V2, V2L, V3, per-sector V4, external champion) that is re-tuned for the task and selected on training data only. |
 
 Each skill is a folder with a `SKILL.md` (the core operating instructions) and a `references/` folder that Claude reads when a task needs the detail.
 
