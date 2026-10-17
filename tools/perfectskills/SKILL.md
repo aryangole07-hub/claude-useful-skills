@@ -37,6 +37,15 @@ Log the outcome so future rankings improve:
 - **neutral**: used it, made little difference.
 Log at most once per task. User praise/complaint about the result is the strongest signal.
 
+## Run it on every prompt (hook)
+
+Add to `~/.claude/settings.json` so Claude is reminded on each prompt:
+
+```json
+"hooks": { "UserPromptSubmit": [ { "hooks": [ { "type": "command",
+  "command": "python \"~/.claude/skills/perfectskills/scripts/remind.py\"", "timeout": 10 } ] } ] }
+```
+
 ## Maintenance
 
 - `skilldex.py index` after installing/removing skills or pulling the library (the catalog also
