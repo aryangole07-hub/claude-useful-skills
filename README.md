@@ -15,6 +15,12 @@ A collection of [Claude Code](https://claude.com/claude-code) skills, grouped by
 |---|---|
 | [`marketml`](AI-ML/marketml) | Quant-researcher method for training, tuning and honestly evaluating ML stock-ranking models: fixed train/test splits with purge and embargo, walk-forward tuning inside training only, no cherry-picking, tradable-universe portfolios with costs, per-year tables (return, daily max/median drawdown, beat-market, top/bottom 10%/5% accuracy), exposure-based diagnostics for why a model won or lost, and a six-method menu (V1, V2, V2L, V3, per-sector V4, external champion) that is re-tuned for the task and selected on training data only. |
 
+## Security
+
+| Skill | What it does |
+|---|---|
+| [`reverse-engineer-anything`](Security/reverse-engineer-anything) | Third-party (vendored from [morluto/rea](https://github.com/morluto/rea), MIT). Reverse-engineer shipped software (native binaries, .NET, Electron/ASAR/JavaScript apps, APKs, firmware, WASM, browser pages, network/packet captures) with the REA MCP server: target routing, summary-first evidence, and findings split into observations, inferences and unknowns. Needs the REA MCP server; see its `UPSTREAM.md`. |
+
 Each skill is a folder with a `SKILL.md` (the core operating instructions) and a `references/` folder that Claude reads when a task needs the detail.
 
 ## Install
@@ -26,6 +32,7 @@ git clone https://github.com/aryangole07-hub/claude-useful-skills
 cp -r claude-useful-skills/UIUX/webdes ~/.claude/skills/webdes
 cp -r claude-useful-skills/UIUX/webani ~/.claude/skills/webani
 cp -r claude-useful-skills/AI-ML/marketml ~/.claude/skills/marketml
+cp -r claude-useful-skills/Security/reverse-engineer-anything ~/.claude/skills/reverse-engineer-anything
 ```
 
 Per project: copy into `<project>/.claude/skills/` instead.
@@ -34,4 +41,4 @@ Claude Code picks the skills up automatically and triggers them on matching task
 
 ## License
 
-MIT
+MIT. Third-party skills keep their own license file in their folder.
