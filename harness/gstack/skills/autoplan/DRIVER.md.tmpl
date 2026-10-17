@@ -1,0 +1,81 @@
+# /autoplan driver: run the review loop from a parent agent
+
+Read this file instead of `autoplan/SKILL.md` when you (a parent agent on any host) drive an
+unattended /autoplan run through `gstack-autoplan`: the reviewers are subagents you dispatch,
+and the runner keeps the state. The commands live in `<root>/bin/`, where `<root>` is the
+folder that holds this `autoplan/` directory; `gstack-autoplan --help` and the first `next`
+print `DRIVER: <root>/autoplan/DRIVER.md`. Run every command with the `GSTACK_LAUNCH`
+assignments your installer printed. Read printed lines and files, never prose: every workflow
+command ends with `GSTACK_RESULT: skill=autoplan status=<s> run=<dir>`, and every error line
+ends with `(<CODE>)`.
+
+## Phases and scope
+
+{{AUTOPLAN_DRIVER_PHASES}}
+The first `next` prints `SCOPE: ui=… (terms; visual; files) dx=… (detected) source=ui:<s>,dx:<s>`
+(each axis is `flag`, `marker` or `detected`). UI needs a rendered file path or a UI term next
+to a visual noun in the Implementation plan. To keep flags for later runs on the same plan, add
+the `SCOPE_PIN:` marker it prints (`<!-- gstack-autoplan-scope: … -->`) as the plan's first
+line yourself; gstack never writes the plan.
+
+## The loop
+
+1. `next` prints one `ATTEMPT: <id> phase=<p> voice=native|outside prompt=<file> result=<file>`
+   per voice. Dispatch the native prompt to a subagent on your model and the outside prompt to
+   a subagent on another model family (or `gstack-outside-voice run`). Each writes `result=`.
+2. Submit each voice exactly once (`BOUND:`). Both voices in closes the phase (`PHASE_CLOSED:`).
+3. Repeat `next` until `status=gate_pending` (`GATE: gate_rev=<n>`); render it with
+   `gstack-gate render <dir>/gate.json --all` and relay every page. You never approve the
+   gate for the owner. Offer `rec` (every recommendation, plan changes included) as the default.
+4. `answer` with the owner's reply and `--by human` (the owner typed the tokens) or
+   `--by agent:<id> --owner-reply "<their words>"` (you relayed them); without `--by` an
+   unattended run refuses (`ANSWER_BY_REQUIRED`). `APPLY: <id> <title> -> <change>` lines are
+   accepted plan changes (status `amend_pending`): edit the plan, then `revise` (the printed
+   `NEXT:` names it), or `revise --settle <id>` when the line says no plan edit is needed. Until
+   then `next` refuses with `PLAN_AMEND_PENDING` and `export` will not mark the run complete.
+5. `REOPENED: <phases>` means loop `next` again (Eng last). `APPROVED:` means `export`.
+
+### On Capy
+
+- Always drive `gstack-autoplan`; never hand-adapt `autoplan/SKILL.md`. A plan you reviewed by
+  hand is not an autoplan run: do not present it as one.
+- Every prompt ends with a `GSTACK TRAILER` block: the reviewer runs the `--for review-voice`
+  install on its own machine (no ./setup, no skills; seconds when warm) and starts its reply
+  with the `gstack:` line. Never tell a reviewer that no install is needed; relay each
+  reviewer's line with its result, and treat a missing line as `gstack: fail not-installed`.
+- Set `GSTACK_AUTOPLAN_CHECKPOINT_DIR` to the private project-user Drive folder (or opt every run in
+  with `gstack-config set autoplan_checkpoint drive`) so a run survives machine replacement: a
+  generation is published at rest, after each bound voice and after each phase transition; restore
+  with `resume --out <new dir> --from <dir>/<run>`, which never redispatches a bound voice.
+
+### Commands
+
+{{AUTOPLAN_DRIVER_COMMANDS}}
+
+## Reviewer result format
+
+Every prompt ends with this contract; `submit --result` enforces it, `submit --record` accepts
+the looser record shapes above.
+
+{{AUTOPLAN_DRIVER_RESULT_FORMAT}}
+
+## Gate replies
+
+A reply binds to the `gate_rev` you read (`--gate-rev`). Bare `yes`/`no` is unparsed, never guessed.
+
+{{AUTOPLAN_DRIVER_GATE}}
+
+## Run directory
+
+{{AUTOPLAN_DRIVER_FILES}} Reviewer files: `<phase>-native-prompt.md`,
+`<phase>-outside-prompt.md`, `<phase>-<voice>.<attempt>.md` (the reviewer writes it), its sealed
+`<phase>-<voice>.<attempt>.bound.md` (what submit bound), `<phase>-consensus.{json,md}`,
+`gate.json`, `decisions.jsonl`. `export` writes `plan.md`, `review-record.md`, `findings.jsonl`,
+`tasks.jsonl`, `timing.json` and rehashes `run.json`; `gstack-artifact validate <dir>/run.json`
+is the completion check. Copy the whole directory, never single files.
+
+## Result codes
+
+{{AUTOPLAN_DRIVER_CODES}}
+
+{{COORDINATOR_CONTRACT}}

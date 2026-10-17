@@ -1,0 +1,463 @@
+// Bootstrap the CoreDevice tunnel to a connected iPhone or iPad running the
+// iOS app under test. Orchestrates the full hand-rolled flow we verified
+// end-to-end:
+//
+//   1. find a paired, connected device via devicectl list devices
+//   2. launch the app on it (no-op if already running)
+//   3. wait briefly for the in-app StateServer to start
+//   4. copy the boot token from the app's sandbox via devicectl copy from
+//      If an earlier daemon already consumed it, relaunch the app once to mint
+//      a fresh boot token, then verify the relaunched StateServer again.
+//   5. POST /auth/rotate to swap boot token → fresh in-memory token
+//   6. return a DeviceTunnel pointing at the device's IPv6 with the rotated
+//      bearer that subsequent proxied requests carry
+//
+// Step 5 is critical: rotation deletes the on-disk token file, so anything
+// that copied it sees a dead credential. The Mac daemon holds the only live
+// token, which it scopes per-tailnet-session via /auth/mint.
+//
+// recoverTunnel() handles a dropped route afterwards without repeating this
+// flow: the app still holds the rotated bearer, and a second bootstrap could
+// only get a new token by relaunching the app.
+
+import { randomBytes } from 'crypto';
+import { spawnSync } from 'child_process';
+import type { DeviceTunnel } from './proxy';
+import {
+  listDevices,
+  resolveTunnelIPv6,
+  getDeviceTunnelIPv6,
+  getDeviceTunnelIPv6FromDevicectl,
+  isAppRunning,
+  launchApp,
+  launchEnvArgs,
+  copyFileFromAppContainer,
+  type DeviceEntry,
+  type SpawnImpl,
+  type ResolveImpl,
+} from './devicectl';
+
+export interface BootstrapOptions {
+  /** Target iPhone/iPad UDID. If null, picks the best connected paired device. */
+  udid?: string;
+  /** Bundle ID of the iOS app hosting the StateServer. */
+  bundleId: string;
+  /** StateServer port. Defaults to 9999. */
+  port?: number;
+  /** Token-path inside the app sandbox (relative to data container). */
+  bootTokenPath?: string;
+  /** Max time to wait for the StateServer to start after launch (ms). */
+  startupTimeoutMs?: number;
+  /** Test injection. */
+  spawnImpl?: SpawnImpl;
+  resolveImpl?: ResolveImpl;
+  fetchImpl?: typeof fetch;
+}
+
+export type BootstrapResult =
+  | { ok: true; tunnel: DeviceTunnel }
+  | { ok: false; error: BootstrapErrorReason; detail?: string };
+
+export type BootstrapErrorReason =
+  | 'no_devices'
+  | 'no_paired_device'
+  | 'device_not_found'
+  | 'multiple_devices'
+  | 'launch_failed'
+  | 'device_locked'
+  | 'state_server_unreachable'
+  | 'wrong_app'
+  | 'boot_token_unavailable'
+  | 'rotate_failed'
+  | 'resolve_failed';
+
+function isSupportedIOSDevice(device: DeviceEntry): boolean {
+  const platform = device.platform.trim().toLowerCase();
+  const deviceType = device.deviceType.trim().toLowerCase();
+  const model = device.model.trim().toLowerCase();
+
+  // productType is present even on older CoreDevice versions. Prefer the
+  // explicit platform/type fields when available, but retain productType as
+  // a compatibility fallback. An explicit non-iOS platform always loses.
+  if (platform && platform !== 'ios' && platform !== 'ipados') return false;
+  return (
+    deviceType === 'iphone'
+    || deviceType === 'ipad'
+    || model.startsWith('iphone')
+    || model.startsWith('ipad')
+  );
+}
+
+function isAvailableDevice(device: Pick<DeviceEntry, 'state' | 'transport'>): boolean {
+  const state = device.state.trim().toLowerCase();
+  const transport = device.transport.trim().toLowerCase();
+  // Xcode 26.6 / iOS 27 beta can report a USB-reachable iPhone as
+  // tunnelState=disconnected until the next devicectl command establishes
+  // the CoreDevice tunnel. The wired transport is the authoritative signal
+  // in that transitional state. Stale devices have no wired transport.
+  return state === 'connected'
+    || state.startsWith('available')
+    || (state === 'disconnected' && transport === 'wired');
+}
+
+function defaultDeviceRank(device: DeviceEntry): number {
+  if (!device.paired || !isSupportedIOSDevice(device) || !isAvailableDevice(device)) return -1;
+
+  const state = device.state.trim().toLowerCase();
+  const transport = device.transport.trim().toLowerCase();
+  // Prefer the USB-connected phone the user is actively working with. Then
+  // prefer an established CoreDevice tunnel over a merely available device.
+  return (transport === 'wired' ? 100 : 0)
+    + (state === 'connected' ? 10 : 0)
+    + (state.startsWith('available') ? 1 : 0);
+}
+
+type DeviceSelection =
+  | { ok: true; device: DeviceEntry }
+  | { ok: false; error: BootstrapErrorReason; detail?: string };
+
+/**
+ * Choose the device a QA session targets: the explicit UDID when one is set,
+ * otherwise the best-ranked paired iPhone or iPad. Ranks that tie (an iPhone
+ * and an iPad both on USB, say) are ambiguous, so the caller gets every
+ * candidate with its UDID instead of a silent pick. `prefer` breaks a tie in
+ * favor of the device a live session already uses.
+ */
+export function selectDevice(devices: DeviceEntry[], udid?: string, prefer?: string): DeviceSelection {
+  if (devices.length === 0) return { ok: false, error: 'no_devices' };
+  if (udid) {
+    const explicit = devices.find((d) => d.identifier === udid);
+    return explicit ? { ok: true, device: explicit } : { ok: false, error: 'device_not_found', detail: udid };
+  }
+
+  const bestRank = Math.max(...devices.map(defaultDeviceRank));
+  const best = bestRank < 0 ? [] : devices.filter((d) => defaultDeviceRank(d) === bestRank);
+  if (best.length === 1) return { ok: true, device: best[0]! };
+  if (best.length > 1) {
+    const preferred = best.find((d) => d.identifier === prefer);
+    if (preferred) return { ok: true, device: preferred };
+    const listing = best.map((d) => `  ${d.name} (${d.deviceType || d.model}): ${d.identifier}`).join('\n');
+    return {
+      ok: false,
+      error: 'multiple_devices',
+      detail: `${best.length} iPhones/iPads are connected and none is selected:\n${listing}\n`
+        + `Pick one, then restart the daemon:\n  export GSTACK_IOS_TARGET_UDID=${best[0]!.identifier}`,
+    };
+  }
+
+  const pairedIOS = devices.find((d) => d.paired && isSupportedIOSDevice(d));
+  if (pairedIOS) {
+    return {
+      ok: false,
+      error: 'device_not_found',
+      detail: `paired device ${pairedIOS.name} (${pairedIOS.identifier}) is ${pairedIOS.state}; connect it over USB and unlock it`,
+    };
+  }
+  const firstIOS = devices.find(isSupportedIOSDevice);
+  if (!firstIOS) {
+    return {
+      ok: false,
+      error: 'device_not_found',
+      detail: 'no iPhone or iPad is connected; non-iOS devices are not eligible for iOS QA',
+    };
+  }
+  return {
+    ok: false,
+    error: 'no_paired_device',
+    detail: `device ${firstIOS.name} (${firstIOS.identifier}) is ${firstIOS.state}; run \`xcrun devicectl manage pair --device ${firstIOS.identifier}\` and tap Trust on the device`,
+  };
+}
+
+const defaultSpawn: SpawnImpl = (cmd, args) => spawnSync(cmd, args, {
+  stdio: 'pipe',
+  timeout: 60_000,
+});
+
+function relaunchApp(
+  udid: string,
+  bundleId: string,
+  spawn: SpawnImpl = defaultSpawn,
+): { ok: true } | { ok: false; error: 'device_locked' | 'launch_failed'; detail?: string } {
+  const env = launchEnvArgs();
+  if (!env.ok) return { ok: false, error: 'launch_failed', detail: env.error };
+  const r = spawn('xcrun', [
+    'devicectl', 'device', 'process', 'launch',
+    '--device', udid,
+    '--terminate-existing',
+    ...env.args,
+    bundleId,
+  ]);
+  if (r.status === 0) return { ok: true };
+
+  const detail = `${r.stderr?.toString() ?? ''}${r.stdout?.toString() ?? ''}`.trim();
+  if (detail.includes('was not, or could not be, unlocked')) {
+    return { ok: false, error: 'device_locked', detail };
+  }
+  return { ok: false, error: 'launch_failed', detail };
+}
+
+/**
+ * Bootstrap a real CoreDevice tunnel to an iOS app's StateServer. Used by
+ * the daemon's default tunnelProvider when GSTACK_IOS_TARGET_UDID is set
+ * (or when the user wants real-device control instead of a stub).
+ */
+export async function bootstrapTunnel(opts: BootstrapOptions): Promise<BootstrapResult> {
+  const port = opts.port ?? 9999;
+  const tokenPath = opts.bootTokenPath ?? 'tmp/gstack-ios-qa.token';
+  const startupTimeoutMs = opts.startupTimeoutMs ?? 5_000;
+  const spawn = opts.spawnImpl;
+  const resolve = opts.resolveImpl;
+  const fetchFn = opts.fetchImpl ?? fetch;
+
+  // Step 1: pick a device
+  const selection = selectDevice(listDevices(spawn), opts.udid);
+  if (!selection.ok) return selection;
+  const target = selection.device;
+  if (!isSupportedIOSDevice(target)) {
+    return {
+      ok: false,
+      error: 'device_not_found',
+      detail: `device ${target.name} (${target.identifier}) is ${target.platform || target.model}, not an iPhone or iPad`,
+    };
+  }
+  if (!target.paired) {
+    return {
+      ok: false,
+      error: 'no_paired_device',
+      detail: `device ${target.name} (${target.identifier}) is ${target.state}; run \`xcrun devicectl manage pair --device ${target.identifier}\` and tap Trust on the device`,
+    };
+  }
+  if (!isAvailableDevice(target)) {
+    return {
+      ok: false,
+      error: 'device_not_found',
+      detail: `device ${target.name} (${target.identifier}) is ${target.state}; connect it over USB and unlock it`,
+    };
+  }
+
+  // Step 2: launch app (idempotent — devicectl returns success if already running)
+  if (!isAppRunning(target.identifier, opts.bundleId, spawn)) {
+    const launched = launchApp(target.identifier, opts.bundleId, spawn);
+    if (!launched.ok) {
+      return { ok: false, error: launched.error === 'device_locked' ? 'device_locked' : 'launch_failed', detail: launched.error };
+    }
+  }
+
+  // Step 3: resolve tunnel IPv6. Try devicectl `info details` first (most
+  // reliable on macOS 26.x), fall through to mDNS via dns.lookup, then
+  // dns.resolve6 as a last-ditch fallback. See devicectl.ts:resolveTunnelIPv6
+  // for the rationale.
+  // When tests inject `resolve`, use it for both the mDNS-lookup path AND the
+  // legacy resolve6 path — otherwise the legacy path would make a real DNS
+  // call. In production, only `resolve` is set (to the dns.lookup-based
+  // default) and the legacy path uses the real dns.resolve6.
+  const ipv6 = await resolveTunnelIPv6({
+    udid: target.identifier,
+    deviceName: target.name,
+    spawn,
+    resolve,
+    legacyResolve: resolve,
+  });
+  if (!ipv6) {
+    return { ok: false, error: 'resolve_failed', detail: target.name };
+  }
+
+  // Step 4: wait for StateServer to become reachable, then scrape boot token.
+  // Probe /healthz with retries (the listener can take a moment to bind).
+  let bootTokenWriteError: string | undefined;
+  const waitForStateServer = async (): Promise<BootstrapResult | null> => {
+    const deadline = Date.now() + startupTimeoutMs;
+    while (Date.now() < deadline) {
+      try {
+        const r = await fetchFn(`http://[${ipv6}]:${port}/healthz`, {
+          signal: AbortSignal.timeout(2_000),
+        });
+        if (r.ok) {
+          const health = await r.json().catch(() => null) as { bundle_id?: string; boot_token_error?: string } | null;
+          // Older bridges did not identify their bundle. Preserve compatibility,
+          // but reject an explicit mismatch from current bridges: another debug
+          // app already owns the fixed StateServer port on this device.
+          if (health?.bundle_id && health.bundle_id !== opts.bundleId) {
+            return {
+              ok: false,
+              error: 'wrong_app',
+              detail: `expected ${opts.bundleId} but StateServer port ${port} belongs to ${health.bundle_id}; terminate the other debug app`,
+            };
+          }
+          bootTokenWriteError = health?.boot_token_error;
+          return null;
+        }
+      } catch { /* retry */ }
+      await new Promise((res) => setTimeout(res, 250));
+    }
+    return {
+      ok: false,
+      error: 'state_server_unreachable',
+      detail: `no /healthz response from [${ipv6}]:${port} within ${startupTimeoutMs}ms`,
+    };
+  };
+
+  const healthFailure = await waitForStateServer();
+  if (healthFailure) return healthFailure;
+
+  const readBootToken = () => copyFileFromAppContainer({
+    udid: target.identifier,
+    bundleId: opts.bundleId,
+    sourceRelativePath: tokenPath,
+    spawn,
+  });
+
+  let bootToken = readBootToken();
+  if (!bootToken && bootTokenWriteError) {
+    // The app reported that it could not write the file. A relaunch would
+    // only fail the same way and wipe the app's state, so stop here.
+    return {
+      ok: false,
+      error: 'boot_token_unavailable',
+      detail: `${opts.bundleId} could not write ${tokenPath}: ${bootTokenWriteError}; fix the app's tmp/ directory, then relaunch the app`,
+    };
+  }
+  if (!bootToken) {
+    // A healthy running app can lack a boot token when an earlier daemon
+    // already rotated it. A new daemon has no way to recover that in-memory
+    // bearer, so restart exactly once to make StateServer mint a fresh one.
+    // The explicit bundle check above prevents disrupting an unrelated app
+    // that happens to own the fixed StateServer port.
+    const relaunched = relaunchApp(target.identifier, opts.bundleId, spawn);
+    if (!relaunched.ok) {
+      return { ok: false, error: relaunched.error, detail: relaunched.detail };
+    }
+
+    // The token is written before StateServer opens its listener. Waiting for
+    // it first prevents a stale response from the terminating process from
+    // being mistaken for readiness of the replacement process.
+    const tokenDeadline = Date.now() + startupTimeoutMs;
+    while (!bootToken && Date.now() < tokenDeadline) {
+      bootToken = readBootToken();
+      if (!bootToken) await new Promise((res) => setTimeout(res, 250));
+    }
+    if (!bootToken) {
+      return {
+        ok: false,
+        error: 'boot_token_unavailable',
+        detail: `couldn't read ${tokenPath} from ${opts.bundleId} after relaunch`,
+      };
+    }
+
+    const relaunchedHealthFailure = await waitForStateServer();
+    if (relaunchedHealthFailure) return relaunchedHealthFailure;
+  }
+
+  // Step 5: rotate the boot token to a fresh in-memory-only one.
+  const rotatedToken = randomBytes(32).toString('base64url');
+  try {
+    const r = await fetchFn(`http://[${ipv6}]:${port}/auth/rotate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${bootToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ new_token: rotatedToken }),
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!r.ok) {
+      return { ok: false, error: 'rotate_failed', detail: `HTTP ${r.status}` };
+    }
+  } catch (err) {
+    return { ok: false, error: 'rotate_failed', detail: (err as Error).message };
+  }
+
+  return {
+    ok: true,
+    tunnel: {
+      udid: target.identifier,
+      ipv6Addr: ipv6,
+      port,
+      bootTokenRotated: rotatedToken,
+    },
+  };
+}
+
+export type TunnelRecovery =
+  /** The app still holds the bearer; keep the session at this (maybe new) address. */
+  | { action: 'reuse'; tunnel: DeviceTunnel }
+  /** Full bootstrap needed. The old bearer was not sent to anything unproven. */
+  | { action: 'bootstrap'; reason: string }
+  /** Route still down with the app running: surface the error, keep the session. */
+  | { action: 'unavailable'; reason: string };
+
+export interface RecoveryOptions {
+  /** Same explicit UDID the bootstrap used, if any. */
+  udid?: string;
+  bundleId: string;
+  probeTimeoutMs?: number;
+  spawnImpl?: SpawnImpl;
+  resolveImpl?: ResolveImpl;
+  fetchImpl?: typeof fetch;
+}
+
+/**
+ * Decide how to recover a cached tunnel after a route failure (503
+ * device_disconnected / 504 upstream_timeout) without relaunching the app.
+ * CoreDevice routes blip while the app keeps running with the rotated bearer
+ * in memory, and the one-shot boot-token file is already gone, so a full
+ * bootstrap would have to relaunch the app and wipe its QA state (#1975).
+ *
+ * The bearer is only ever sent to the address `devicectl` reports for the
+ * pinned UDID, or to the address this session already used. Only a 401 (the
+ * app was replaced) or a confirmed app-absent state asks for a bootstrap.
+ */
+export async function recoverTunnel(failed: DeviceTunnel, opts: RecoveryOptions): Promise<TunnelRecovery> {
+  const spawn = opts.spawnImpl;
+  const fetchFn = opts.fetchImpl ?? fetch;
+  const timeoutMs = opts.probeTimeoutMs ?? 3_000;
+
+  const selection = selectDevice(listDevices(spawn), opts.udid, failed.udid);
+  if (!selection.ok) {
+    return { action: 'unavailable', reason: `${selection.error}${selection.detail ? `: ${selection.detail}` : ''}` };
+  }
+  const device = selection.device;
+  if (device.identifier !== failed.udid) {
+    return { action: 'bootstrap', reason: `target device changed from ${failed.udid} to ${device.identifier}` };
+  }
+
+  let address = getDeviceTunnelIPv6FromDevicectl(device.identifier, spawn);
+  if (!address) {
+    const byName = await getDeviceTunnelIPv6(device.name, opts.resolveImpl);
+    if (byName && byName !== failed.ipv6Addr) {
+      return { action: 'bootstrap', reason: `tunnel address changed to ${byName} and devicectl could not tie it to ${failed.udid}` };
+    }
+    address = failed.ipv6Addr;
+  }
+
+  const base = `http://[${address}]:${failed.port}`;
+  const appGone = (reason: string): TunnelRecovery => (isAppRunning(device.identifier, opts.bundleId, spawn)
+    ? { action: 'unavailable', reason: `${reason}; ${opts.bundleId} is still running, so the session is kept` }
+    : { action: 'bootstrap', reason: `${opts.bundleId} is not running on ${device.identifier}` });
+
+  let health: Response;
+  try {
+    health = await fetchFn(`${base}/healthz`, { signal: AbortSignal.timeout(timeoutMs) });
+  } catch {
+    return appGone(`no /healthz response from ${base}`);
+  }
+  const owner = (await health.json().catch(() => null) as { bundle_id?: string } | null)?.bundle_id;
+  if (owner && owner !== opts.bundleId) {
+    return { action: 'bootstrap', reason: `StateServer at ${base} now belongs to ${owner}` };
+  }
+
+  let probe: Response;
+  try {
+    probe = await fetchFn(`${base}/state/snapshot`, {
+      headers: { 'Authorization': `Bearer ${failed.bootTokenRotated}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch {
+    return appGone(`authenticated probe to ${base} failed`);
+  }
+  await probe.arrayBuffer().catch(() => undefined);
+  if (probe.status === 401) {
+    return { action: 'bootstrap', reason: `${opts.bundleId} rejected the session bearer (the app was relaunched)` };
+  }
+  return { action: 'reuse', tunnel: { ...failed, ipv6Addr: address } };
+}

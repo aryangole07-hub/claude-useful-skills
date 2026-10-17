@@ -1,0 +1,22 @@
+[
+  {
+    "file": "browse/src/server.ts",
+    "match": "const isGetConnect = req.method === 'GET' && url.pathname === '/connect';",
+    "reason": "Tunnel-surface filter: admits the GET /connect liveness probe before any route dispatch."
+  },
+  {
+    "file": "browse/src/server.ts",
+    "match": "const allowed = TUNNEL_PATHS.has(url.pathname);",
+    "reason": "Tunnel-surface filter: default-deny path allowlist (the TUNNEL_PATHS literal)."
+  },
+  {
+    "file": "browse/src/server.ts",
+    "match": "if (url.pathname !== '/connect' && !getTokenInfo(req)) {",
+    "reason": "Tunnel-surface filter: every tunnel path except /connect needs a scoped token."
+  },
+  {
+    "file": "browse/src/routes/table.ts",
+    "match": "&& (r.prefix ? pathname.startsWith(r.path) : pathname === r.path),",
+    "reason": "The route table's own matcher (findRoute)."
+  }
+]

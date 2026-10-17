@@ -1,44 +1,95 @@
 # claude-useful-skills
 
-A collection of [Claude Code](https://claude.com/claude-code) skills, grouped by area.
+A curated library of [Claude Code](https://claude.com/claude-code) skills (~670), grouped by what they do.
+Our own skills sit next to third-party packs, which are vendored unchanged with their upstream license
+and an `UPSTREAM.md` naming the source commit.
 
-## UIUX
+**Don't install everything.** Every installed skill's description is loaded into context on every turn,
+so 600+ skills would cost tokens and make Claude pick worse. Install [`perfectskills`](tools/perfectskills)
+plus the few you use daily; perfectskills searches the whole library and loads only the 0–3 skills a
+task needs.
+
+| Folder | What's in it |
+|---|---|
+| [`tools/`](tools) | Skills that reach past the terminal (web, docs, Google Workspace), plus **perfectskills**, the router |
+| [`harness/`](harness) | How Claude works *before* it types: planning, TDD, review, shipping workflows |
+| [`design/`](design) | UI/UX taste and design systems: kills the generic AI look |
+| [`writing/`](writing) | Prose quality |
+| [`marketing/`](marketing) | Growth, SEO, ads, copy |
+| [`memory/`](memory) | What survives the session: plans on disk, code graphs, notes |
+| [`costopti/`](costopti) | Same answers, fewer tokens |
+| [`official/`](official) | Anthropic's official skills |
+| [`ai-ml/`](ai-ml) | Machine learning |
+| [`security/`](security) | Reverse engineering / security |
+
+## Our own skills
 
 | Skill | What it does |
 |---|---|
-| [`webdes`](UIUX/webdes) | Builds and polishes websites the way a senior product designer and frontend engineer would, so they look intentionally designed rather than AI-generated: anti-vibe-coding rules, hierarchy, typography, spacing, responsive layout from 4K to small phones, window resizing, accessibility, and a measured QA method. |
-| [`webani`](UIUX/webani) | Premium motion and 3D: scroll-driven 3D heroes built from the product's own concept (scroll-linked, never scroll-jacked), a reusable motion system, micro-interactions, the "ending becomes the product" handoff, performance rules, and a capture-every-state QA loop. Builds on `webdes`. |
+| [`perfectskills`](tools/perfectskills) | Skill router. On every prompt it searches all installed, plugin and library skills, picks the best 0–3 for the task, loads only those, and logs outcomes so its picks improve over time (`scripts/skilldex.py`, stdlib Python). |
+| [`webdes`](design/webdes) | Builds and polishes websites the way a senior product designer and frontend engineer would: anti-vibe-coding rules, hierarchy, typography, spacing, responsive layout from 4K to small phones, accessibility, and a measured QA method. |
+| [`webani`](design/webani) | Premium motion and 3D: scroll-linked 3D heroes, a reusable motion system, micro-interactions, performance rules, and a capture-every-state QA loop. Builds on `webdes`. |
+| [`marketml`](ai-ml/marketml) | Quant-researcher method for training, tuning and honestly evaluating ML stock-ranking models: purged/embargoed splits, walk-forward tuning inside training only, tradable portfolios with costs, per-year tables, and diagnostics for why a model won or lost. |
 
-## AI-ML
+## Third-party packs (vendored)
 
-| Skill | What it does |
-|---|---|
-| [`marketml`](AI-ML/marketml) | Quant-researcher method for training, tuning and honestly evaluating ML stock-ranking models: fixed train/test splits with purge and embargo, walk-forward tuning inside training only, no cherry-picking, tradable-universe portfolios with costs, per-year tables (return, daily max/median drawdown, beat-market, top/bottom 10%/5% accuracy), exposure-based diagnostics for why a model won or lost, and a six-method menu (V1, V2, V2L, V3, per-sector V4, external champion) that is re-tuned for the task and selected on training data only. |
+| Folder | Upstream | Skills | Notes |
+|---|---|---:|---|
+| `harness/superpowers` | [obra/superpowers](https://github.com/obra/superpowers) | 15 | Brainstorm → plan → TDD → review workflow |
+| `harness/ecc` | [affaan-m/ECC](https://github.com/affaan-m/ECC) | 311 | Everything Claude Code: language/framework skills, ops, security |
+| `harness/gstack` | [garrytan/gstack](https://github.com/garrytan/gstack) | 56 | Garry Tan's ship/review/QA/browse workflow; many call gstack's `bin/` tools |
+| `harness/agent-skills` | [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) | 25 | Production engineering practices |
+| `harness/ponytail` | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) | 6 | Lightweight planning harness |
+| `design/ui-ux-pro-max` | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | 7 | Design-system generator with style/palette/font data |
+| `design/taste-skill` | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) | 14 | Anti-slop frontend taste rules |
+| `design/awesome-design-md` | [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) | – | `DESIGN.md` files describing real brands' design systems (reference, not skills) |
+| `writing/humanizer` | [blader/humanizer](https://github.com/blader/humanizer) | 1 | Removes AI-writing tells |
+| `marketing/marketingskills` | [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) | 50 | CRO, SEO, ads, copy, launch |
+| `memory/planning-with-files` | [OthmanAdi/planning-with-files](https://github.com/OthmanAdi/planning-with-files) | 6 | Manus-style plan/findings/progress files |
+| `memory/obsidian-skills` | [kepano/obsidian-skills](https://github.com/kepano/obsidian-skills) | 6 | Obsidian markdown, bases, canvas |
+| `memory/codegraph` | [colbymchenry/codegraph](https://github.com/colbymchenry/codegraph) | 2 | Skills for the codegraph indexer (needs its CLI/MCP) |
+| `memory/claude-mem` | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) | 27 | Skills of the claude-mem plugin (memory needs its worker + hooks) |
+| `tools/firecrawl` | [firecrawl/firecrawl](https://github.com/firecrawl/firecrawl) | 5 | Web scraping/search (needs a Firecrawl API key) |
+| `tools/context7` | [upstash/context7](https://github.com/upstash/context7) | 3 | Up-to-date library docs (pairs with the Context7 MCP) |
+| `tools/workspace-cli` | [googleworkspace/cli](https://github.com/googleworkspace/cli) | 95 | Gmail/Drive/Calendar/Sheets via the `gws` CLI |
+| `tools/agent-reach` | [Panniantong/Agent-Reach](https://github.com/Panniantong/Agent-Reach) | 1 | Read Twitter/Reddit/YouTube/etc. (needs its CLI) |
+| `tools/last30days` | [mvanhorn/last30days-skill](https://github.com/mvanhorn/last30days-skill) | 1 | Research what people said about a topic in the last 30 days |
+| `costopti/caveman` | [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) | 22 | Terse output mode + memory-file compression. Saves output tokens only, which are a small share of a session |
+| `official/anthropic` | [anthropics/skills](https://github.com/anthropics/skills) | 14 | Apache-2.0 skills. `docx/pdf/pptx/xlsx` are source-available (all rights reserved) and are **not** copied; get them from upstream or the `anthropic-skills` plugin |
 
-## Security
+Re-vendor everything with `python tools/vendor.py <folder-of-clones>`.
 
-| Skill | What it does |
-|---|---|
-| [`reverse-engineer-anything`](Security/reverse-engineer-anything) | Third-party (vendored from [morluto/rea](https://github.com/morluto/rea), MIT). Reverse-engineer shipped software (native binaries, .NET, Electron/ASAR/JavaScript apps, APKs, firmware, WASM, browser pages, network/packet captures) with the REA MCP server: target routing, summary-first evidence, and findings split into observations, inferences and unknowns. Needs the REA MCP server; see its `UPSTREAM.md`. |
+## Tools, not skills (link only)
 
-Each skill is a folder with a `SKILL.md` (the core operating instructions) and a `references/` folder that Claude reads when a task needs the detail.
+These are programs (MCP servers, hooks, proxies, desktop apps). They run code, so install them
+deliberately from upstream rather than copying files.
+
+| Category | Project | What it is |
+|---|---|---|
+| harness | [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills) | A `CLAUDE.md` of Karpathy's LLM-coding rules (no license, so not copied) |
+| memory | [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | `/graphify` builds a local knowledge graph of the repo to query instead of grepping |
+| memory | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) | Plugin: hooks + background worker that store session memory |
+| tools | [microsoft/playwright-mcp](https://github.com/microsoft/playwright-mcp) | Browser automation MCP server |
+| tools | [upstash/context7](https://github.com/upstash/context7) | Docs MCP server |
+| tools | [farion1231/cc-switch](https://github.com/farion1231/cc-switch) | Desktop app: switch API providers, manage MCP/skills/prompts |
+| tools | [paperclipai/paperclip](https://github.com/paperclipai/paperclip) | Orchestration server for teams of agents |
+| costopti | [rtk-ai/rtk](https://github.com/rtk-ai/rtk) | Rust CLI that compresses command output before it reaches the model |
+| costopti | [headroomlabs-ai/headroom](https://github.com/headroomlabs-ai/headroom) | Proxy that compresses tool output, logs, RAG chunks and history |
+| costopti | [mksglu/context-mode](https://github.com/mksglu/context-mode) | MCP that keeps raw tool output out of context (no license, so not copied) |
+| costopti | [jarrodwatts/claude-hud](https://github.com/jarrodwatts/claude-hud) | Statusline plugin showing context use, rate limits, tools, agents |
 
 ## Install
 
-Copy a skill folder into your skills directory: user-level (available in every project) or per project.
-
 ```bash
 git clone https://github.com/aryangole07-hub/claude-useful-skills
-cp -r claude-useful-skills/UIUX/webdes ~/.claude/skills/webdes
-cp -r claude-useful-skills/UIUX/webani ~/.claude/skills/webani
-cp -r claude-useful-skills/AI-ML/marketml ~/.claude/skills/marketml
-cp -r claude-useful-skills/Security/reverse-engineer-anything ~/.claude/skills/reverse-engineer-anything
+cp -r claude-useful-skills/tools/perfectskills ~/.claude/skills/perfectskills
+python ~/.claude/skills/perfectskills/scripts/skilldex.py index   # point it at the clone with PERFECTSKILLS_LIBRARY if it isn't in ~/projects
+# plus any skill you use daily, e.g.
+cp -r claude-useful-skills/design/webdes ~/.claude/skills/webdes
 ```
 
 Per project: copy into `<project>/.claude/skills/` instead.
 
-Claude Code picks the skills up automatically and triggers them on matching tasks; you can also invoke one explicitly, e.g. `/webdes`, `/webani` or `/marketml`.
-
 ## License
 
-MIT. Third-party skills keep their own license file in their folder.
+MIT for our own skills. Third-party packs keep their upstream license (in each pack's folder).

@@ -1,0 +1,6 @@
+# gstack
+
+Third-party, vendored unchanged from [garrytan/gstack](https://github.com/garrytan/gstack) at `eca247e99a3b86642e907cdd11c309f8afe624e2 2026-10-17`.
+License: see `LICENSE` (upstream's). Copied: `autoplan/`, `benchmark/`, `benchmark-models/`, `browse/`, `canary/`, `careful/`, `codex/`, `context-restore/`, `context-save/`, `cso/`, `design-consultation/`, `design-html/`, `design-review/`, `design-shotgun/`, `deslop-shared-libs/`, `devex-review/`, `diagram/`, `document-generate/`, `document-release/`, `eval-plan/`, `freeze/`, `gstack-upgrade/`, `guard/`, `health/`, `investigate/`, `ios-clean/`, `ios-design-review/`, `ios-fix/`, `ios-qa/`, `ios-sync/`, `land-and-deploy/`, `landing-report/`, `learn/`, `make-pdf/`, `office-hours/`, `open-gstack-browser/`, `pair-agent/`, `plan-ceo-review/`, `plan-design-review/`, `plan-devex-review/`, `plan-eng-review/`, `plan-tune/`, `qa/`, `qa-only/`, `retro/`, `review/`, `scrape/`, `setup-browser-cookies/`, `setup-deploy/`, `setup-gbrain/`, `ship/`, `skillify/`, `spec/`, `sync-gbrain/`, `test-audit/`, `unfreeze/` (56 skills).
+
+Some skills call scripts, CLIs, MCP servers or hooks that only exist in the full upstream project; install it from upstream for those to work.
