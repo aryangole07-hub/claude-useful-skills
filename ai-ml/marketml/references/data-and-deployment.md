@@ -69,3 +69,6 @@ Two honest ways to choose a pair:
 - **Cache per-entity feature work.** Example: chart-pattern detection per company, keyed by a hash of that entity's own input series. A rebuild then recomputes only what changed.
 - **Compile hot Python loops** (numba) and spread them over the allowed cores.
 - **Adopt a speed-up only after comparing old vs new output on every column and row** (equal within float rounding).
+- **Keep a pure-Python reference next to every compiled kernel** and gate the fast path behind an env switch. Prove equality with a SHA-256 per output array, computed in separate processes, so two full outputs never sit in memory together. Example: numba twins of chart-pattern searches gave 27× speed, with all events and all 163 panel arrays bit-identical.
+- **Share big read-only arrays across worker processes.** Build them once, `np.save` them, and have each worker `np.load(..., mmap_mode="r")`. Ten private copies of price/circuit arrays ran a 32 GB machine out of memory, while the memory-mapped version used about 1.6 GB per worker. Run a memory watchdog during big grids.
+- **Parallelism is not free.** Running independent pandas steps in side processes saved about 1 minute of 10 but left 0.6 GB free. Measure memory, not just time.
