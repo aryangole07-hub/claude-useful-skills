@@ -35,6 +35,8 @@ If the project already has its own research pipeline, follow the same procedure 
 
 ## Operating procedure
 
+0. **Audit the data first** (references/data-and-deployment.md §1). Validate labels such as sectors against the exchange's own classification. Scan for feed gaps, i.e. many series ending on the same day. Make sure delisted companies are present. In one real build, 57% of the sector labels were wrong and a price feed had silently stopped. Neither showed up in the backtest numbers.
+
 1. **Pin the question.** What exactly is predicted (e.g. 63-day forward return rank)? Over which universe (all stocks vs the liquid top-N that can actually be traded)? With what objective? Write these down before training.
 2. **Fix the split before looking at results.** Train on the older years and test on the most recent ones (e.g. train 2001-2020, test 2021-2025). State the split in the code's docstring with the date it was fixed. Never move it after seeing test numbers.
 3. **Purge and embargo.** A training label must END before the test starts. With a 63-day label, drop the last 63 trading days of training (plus a few days of embargo). For the tuning objective, use only rebalance dates whose labels finish inside training.
@@ -44,6 +46,8 @@ If the project already has its own research pipeline, follow the same procedure 
 7. **Report per period, not just a 5-year CAGR.** For each test year (and a recent window), show return, max drawdown, median drawdown, the share of months beating the market, and top/bottom accuracy, against a median-stock (equal-weight universe) row and an index row. See references/evaluation.md.
 8. **Explain wins and losses with exposures, not stories.** Measure what the picks were: size, momentum and "lottery" (recent max daily return) percentiles, and the holdings' past-12-month return. Compare against the same style quintiles' returns that year. See references/diagnostics.md.
 9. **Report honestly.** Say plainly which variant the objective chose, including when it lost. Label post-hoc variants as descriptive. List the data caveats. Keep the losing tables in the write-up too.
+
+10. **Turning rankings into a tradable strategy** (long-only V + S-veto pairs, adaptive vs fixed pair choice, money-level playbooks with capacity, slippage and tax, versioned builds with rollback, fast verified engines): see references/data-and-deployment.md §2-6.
 
 ## Hard rules
 
