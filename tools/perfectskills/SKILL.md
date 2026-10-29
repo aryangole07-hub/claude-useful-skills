@@ -24,8 +24,32 @@ log) lives in `~/.claude/perfectskills/`.
 4. **Load.** Installed/plugin skill → invoke it with the Skill tool. Library skill → Read its
    `SKILL.md` (path from the search) and follow it; read its `references/` only when the task
    needs that detail.
-5. **Tell the user in one short line** which skills you're using (e.g. "Using: webdes,
-   frontend-design"). No line if none.
+5. **Tell the user in one short line** which skills you're using (e.g. "Using: uiux,
+   security-audit"). No line if none.
+6. **Always pair with `model-router`** (its own hook fires on every prompt too): after picking
+   skills, route the work by model rank (easy -> haiku, normal -> sonnet, hardest -> opus, never fable).
+
+## House map (these win over a generic search hit for the same job)
+
+| Job | Use | Not |
+|---|---|---|
+| Build, redesign, restyle, animate, QA or audit any website / UI / landing page / dashboard | `uiux` (the one design skill; folds in pro-design, webdes, webani, Emil Kowalski, impeccable, taste, Vercel guidelines) | webdes, webani, pro-design, taste-skill, ui-ux-pro-max, frontend-design separately |
+| Motion review, frame-accurate capture, promo/launch video | `uiux` render lab; `hyperframes` for HTML -> MP4 video | |
+| Charts / data visuals in React | `uiux` toolkit (Bklit UI); `dataviz` for chart design rules | |
+| Find local businesses with old sites, rebuild + pitch | `website-rebuilder` (nearest-first; design via `uiux`) | |
+| Security audit / pen test of a codebase | `security-audit` (Cloudflare, full mode only on explicit request); `security-and-hardening` for coding-time hardening | |
+| Launch readiness: legal pages, consent, accessibility, 19 security checks | `uiux` launch gate (`references/launch-checklist.md`) + `shipping-and-launch` | |
+| Questions about a codebase's structure, where things live | `graphify` (if `graphify-out/` exists, query it first) | |
+| "Is there a skill for X?" and nothing here fits | `find-skills` (skills.sh registry) | |
+| Out of Claude usage / tokens | `more-credits` (FreeLLMAPI, then OmniRoute) | |
+| Which model should do this piece | `model-router` (every prompt) | |
+| Drive a browser quickly from the shell | `playwright-cli`; MCPs: playwright, chrome-devtools | |
+| Customers / launch / go-to-market for signal1 | agent `signal1-customers`; plugins `sales`, `marketing` | |
+| Stock-ranking ML research, backtests, holdouts | `marketml` | |
+| NSE intraday day-trading pipeline | `trader-india` (US `trader-*` pack removed 2026-10-29; reinstall from `E:\projects\signal\day-trader-skill` if ever needed) | |
+| Engineering workflow (spec, plan, TDD, review, debug, ship) | addyosmani agent-skills (`spec-driven-development`, `test-driven-development`, `code-review-and-quality`, `debugging-and-error-recovery`, `shipping-and-launch`, ...) | |
+| Keep code minimal, avoid over-engineering | `ponytail` plugin | |
+| Office files | `anthropic-skills:docx/pdf/pptx/xlsx` | |
 
 ## Learn (after the task, or when the user reacts)
 

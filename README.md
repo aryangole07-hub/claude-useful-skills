@@ -27,8 +27,11 @@ task needs.
 | Skill | What it does |
 |---|---|
 | [`perfectskills`](tools/perfectskills) | Skill router. On every prompt it searches all installed, plugin and library skills, picks the best 0–3 for the task, loads only those, and logs outcomes so its picks improve over time (`scripts/skilldex.py`, stdlib Python). |
-| [`webdes`](design/webdes) | Builds and polishes websites the way a senior product designer and frontend engineer would: anti-vibe-coding rules, hierarchy, typography, spacing, responsive layout from 4K to small phones, accessibility, and a measured QA method. |
-| [`webani`](design/webani) | Premium motion and 3D: scroll-linked 3D heroes, a reusable motion system, micro-interactions, performance rules, and a capture-every-state QA loop. Builds on `webdes`. |
+| [`uiux`](design/uiux) | **The** website/UI skill (replaces `webdes` + `webani`; folds in pro-design, Vercel's Web Interface Guidelines, Emil Kowalski's animation craft, impeccable's layout rules, taste's art direction, awesome-design-md's DESIGN.md format and the screenshot-to-code method). Brand sheet first, pattern per section, the curve rule (entrances ease out, exits ease in, interface springs with slight overshoot, nothing linear), a headless render lab (`scripts/render_lab.py`: fake-clock frame capture, synthesised audio, beat-locked cuts, dead-frame hunt, contact sheets), toolkit (Motion, Bklit UI, Kokonut UI, HyperFrames, playwright-cli), a two-round verification loop with honest scoring, and a launch gate (19 security checks + legal/compliance). |
+| [`pro-design`](design/pro-design) | Short four-part design process (brand, pattern library, motion, verification loop). Folded into `uiux`; kept for reference. |
+| [`model-router`](tools/model-router) | Saves tokens: grades each prompt's subtasks and routes easy work to Haiku, normal to Sonnet and the hardest to Opus (never Fable). Ships a UserPromptSubmit hook (`scripts/remind.py`) to run next to perfectskills on every prompt. |
+| [`more-credits`](tools/more-credits) | When Claude Code's usage runs out: relaunch it against a local free-model router (FreeLLMAPI, then OmniRoute) with `more-credits.ps1`, with privacy and quality rules for the fallback session. |
+| [`website-rebuilder`](marketing/website-rebuilder) | Fork of pantheonmarketing/claude-website-rebuilder: nearest-first local prospect search (`scripts/nearby.py`, OpenStreetMap rings 1-40 km), design via `uiux`, before/after pitch cards. |
 | [`marketml`](ai-ml/marketml) | Quant-researcher method for training, tuning and honestly evaluating ML stock-ranking models: purged/embargoed splits, walk-forward tuning inside training only, tradable portfolios with costs, per-year tables, and diagnostics for why a model won or lost. |
 
 ## Third-party packs (vendored)
@@ -55,6 +58,15 @@ task needs.
 | `tools/agent-reach` | [Panniantong/Agent-Reach](https://github.com/Panniantong/Agent-Reach) | 1 | Read Twitter/Reddit/YouTube/etc. (needs its CLI) |
 | `tools/last30days` | [mvanhorn/last30days-skill](https://github.com/mvanhorn/last30days-skill) | 1 | Research what people said about a topic in the last 30 days |
 | `costopti/caveman` | [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) | 22 | Terse output mode + memory-file compression. Saves output tokens only, which are a small share of a session |
+| `security/security-audit` | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | 1 | Six-phase, evidence-first security audit with validated findings |
+| `tools/find-skills` | [vercel-labs/skills](https://github.com/vercel-labs/skills) | 1 | Discover and install skills from the skills.sh registry |
+| `tools/playwright-cli` | [microsoft/playwright-cli](https://github.com/microsoft/playwright-cli) | 1 | Drive a browser from the shell (needs `npm i -g @playwright/cli`) |
+| `tools/hyperframes` | [heygen-com/hyperframes](https://github.com/heygen-com/hyperframes) | 7 | HTML to deterministic MP4 video (needs its CLI) |
+| `design/emil-skills` | [emilkowalski/skills](https://github.com/emilkowalski/skills) | 16 | Design-engineering and animation polish (distilled into `uiux`) |
+| `design/impeccable` | [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | 1 | Layout and craft rules, audit and critique (distilled into `uiux`) |
+| `memory/graphify` | [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | 1 | Codebase/docs to a queryable knowledge graph (needs `pip install graphifyy`) |
+| `marketing/knowledge-work-sales` | [anthropics/knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) | 36 | Anthropic's sales plugin skills |
+| `marketing/knowledge-work-marketing` | [anthropics/knowledge-work-plugins](https://github.com/anthropics/knowledge-work-plugins) | 8 | Anthropic's marketing plugin skills |
 | `official/anthropic` | [anthropics/skills](https://github.com/anthropics/skills) | 14 | Apache-2.0 skills. `docx/pdf/pptx/xlsx` are source-available (all rights reserved) and are **not** copied; get them from upstream or the `anthropic-skills` plugin |
 
 Re-vendor everything with `python tools/vendor.py <folder-of-clones>`.
