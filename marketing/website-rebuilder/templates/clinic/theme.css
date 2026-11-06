@@ -1,0 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Figtree", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, sans-serif;
+  --bg: #f3f6f5;
+  --surface: #ffffff;
+  --ink: #10201e;
+  --muted: #52625f;
+  --line: #dce6e4;
+  --brand: #0b6159;
+  --accent: #e07a5f;
+  --dark: #0c2421;
+  --head-weight: 650;
+}

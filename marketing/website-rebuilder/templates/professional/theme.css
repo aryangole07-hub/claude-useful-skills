@@ -1,0 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Source Serif 4", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #ffffff;
+  --surface: #f7f7f5;
+  --ink: #1c2430;
+  --muted: #5a6472;
+  --line: #e3e5e8;
+  --brand: #233b6e;
+  --accent: #b8893c;
+  --dark: #141c2c;
+}

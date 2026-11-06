@@ -1,0 +1,16 @@
+@import url("https://fonts.googleapis.com/css2?family=Young+Serif&family=Work+Sans:wght@400;500;600&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Young Serif", Georgia, serif;
+  --font-body: "Work Sans", system-ui, sans-serif;
+  --bg: #1a1411;
+  --surface: #231b16;
+  --ink: #f3e9d8;
+  --muted: #bfae98;
+  --line: #3a2e26;
+  --brand: #f2b632;
+  --brand-ink: #1a120c;
+  --accent: #f2b632;
+  --dark: #120d0a;
+  --head-weight: 400;
+}

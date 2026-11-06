@@ -1,0 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Barlow Condensed", system-ui, sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #0e1116;
+  --muted: #545b66;
+  --line: #dfe3e9;
+  --brand: #1546c4;
+  --accent: #ffd400;
+  --dark: #0b0f17;
+}

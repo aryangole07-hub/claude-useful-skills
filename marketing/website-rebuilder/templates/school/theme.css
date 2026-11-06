@@ -1,0 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,600&family=Public+Sans:wght@400;500;600&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Literata", Georgia, serif;
+  --font-body: "Public Sans", system-ui, sans-serif;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --ink: #121a2e;
+  --muted: #586074;
+  --line: #dde0e7;
+  --brand: #1b3a7a;
+  --accent: #d4a017;
+  --dark: #0e1830;
+}

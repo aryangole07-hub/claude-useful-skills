@@ -1,0 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter+Tight:wght@400;500;600&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-body: "Inter Tight", system-ui, sans-serif;
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --ink: #111111;
+  --muted: #5f5f5f;
+  --line: #e6e6e3;
+  --brand: #111111;
+  --brand-ink: #ffffff;
+  --accent: #2f6f4f;
+  --dark: #111111;
+}

@@ -1,0 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Gloock&family=Jost:wght@400;500;600&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Gloock", Georgia, serif;
+  --font-body: "Jost", system-ui, sans-serif;
+  --bg: #eeeae2;
+  --surface: #faf8f4;
+  --ink: #1b231e;
+  --muted: #5c645e;
+  --line: #d9d3c7;
+  --brand: #23493a;
+  --accent: #a8803f;
+  --dark: #16241d;
+  --head-weight: 400;
+}

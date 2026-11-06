@@ -62,17 +62,30 @@ Prompt pattern: `Photorealistic ... [local setting] ... [people matching the loc
 
 Convert to JPG, resize to 1920 px wide (hero) or 1000-1200 px (others), quality about 84.
 
-## Step 4: Build (multi-page, shared assets)
+## Step 4: Build from a template first (user rule, 2026-11-06: templates save credits)
 
 ```
-index.html  services.html  portfolio.html (or team.html)  contact.html
-style.css   app.js   img/
+python scripts/tpl.py list                         # templates/INDEX.md: template -> niches
+python scripts/tpl.py new <template> sites/<biz>   # engine + template copied, HTML shells written
 ```
-- `app.js` injects the shared header, footer and floating call/chat buttons, and builds the service menus from one `SERVICES` array. Each page sets `<body data-page="...">`.
-- Re-theme by changing the `:root` colour variables and the font import at the top of `style.css`.
+1. **A template fits the niche** (check INDEX.md's niches column): `tpl.py new`, then only:
+   - `content.js`: replace every SAMPLE fact with the business's real ones (Step 2); drop sections you have no real content for, reorder or add sections from the engine's list. Keep it strict JSON after `window.SITE = `.
+   - `theme.css`: their brand colours (from their logo / signboard) and, if the template's fonts clash with their character, a new font pair.
+   - `img/`: their photos (Step 2) and any AI images (Step 3), at the paths content.js names.
+   - `python scripts/tpl.py shells sites/<biz>` after changing pages or titles.
+   Skip the full uiux design pass: the template already passed it. Still run Step 5 (verify) on every site.
+2. **No template fits**: design it per the uiux skill as below, but build it ON the engine (new section types go into
+   `templates/_engine/engine.js` + `engine.css`, so every template gains them). When it passes Step 5, save it:
+   `python scripts/tpl.py save sites/<biz> <name> "<niches>" "<one-line layout summary>"`, then replace that business's
+   real facts in `templates/<name>/content.js` with SAMPLE ones. Every new niche becomes a template the next time.
+3. Improving the engine (a bug, a better section) helps all templates; keep changes backward compatible with existing content.js files.
+
+Site layout: `index.html` + 3 inner pages (each a thin shell, `<body data-page>`), `engine.css`, `engine.js` (shared, not edited per site),
+`theme.css`, `content.js`, `img/`. The engine injects the header, footer and floating call/WhatsApp buttons and renders each page's
+`sections` (hero split|full, pagehead, stats, cards, split, plist, tiles, people, steps, gallery, quotes, notices, chips, faq, cta, contact).
 
 ### Design rules
-- **Run the `uiux` skill** for direction, layout, type, colour, motion and verification. Its subject inventory and idea sentence replace look-by-business-type templates, so don't default to "navy and gold for law" or "cream for cafes".
+- **New designs (no template fits) run the `uiux` skill** for direction, layout, type, colour, motion and verification. Within a template, the per-site choices are brand colours, fonts and which sections to show; don't default to "navy and gold for law" or "cream for cafes" when picking the brand.
 - **Section rhythm:** pick each section's pattern by what this business needs to prove (uiux section 3). A typical home page still covers hero, trust (years, jobs, rating), services, how it works (only if it's a real sequence), work/gallery, why us, real testimonials, call to action, contact. Neighbouring sections never share a layout.
 - **Motion:** follow uiux's curve rule (entrances ease out, exits ease in, interface springs with slight overshoot, nothing linear) and its one orchestrated moment. No fade-and-slide on every section.
 - **Always:** a sticky header with the phone number, a floating call / chat button on mobile, real photos above stock, every phone number and chat link clickable.
@@ -110,6 +123,7 @@ Deploy a preview (Cloudflare Pages, Vercel, Netlify) only when the user says so,
 ## Output checklist
 - [ ] Prospect picked nearest-first (distance stated)
 - [ ] uiux design pass + verification + launch gate done
+- [ ] Built from a template (named), or a new design saved with `tpl.py save` and listed in templates/INDEX.md
 - [ ] Site folder with 4 pages, shared css/js, compressed images
 - [ ] All real facts used, nothing invented outside SAMPLE/CONFIRM-marked spots
 - [ ] Desktop + mobile screenshots, overflowX=0 everywhere, recording saved

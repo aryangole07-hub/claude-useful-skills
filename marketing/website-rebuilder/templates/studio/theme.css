@@ -1,0 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Unbounded:wght@600;700&family=Manrope:wght@400;500;600&display=swap");
+/* Re-theme here only: brand colours + fonts. Everything else lives in engine.css. */
+:root {
+  --font-head: "Unbounded", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+  --bg: #f2f2ee;
+  --surface: #ffffff;
+  --ink: #121212;
+  --muted: #555555;
+  --line: #d8d8d2;
+  --brand: #2f3cff;
+  --brand-ink: #ffffff;
+  --accent: #ff5a3c;
+  --dark: #121212;
+}
